@@ -7,6 +7,7 @@ Parser for config.xml file. Read plugin-specific preferences (from <universal-li
     fs = require('fs'),
     xml2js = require('xml2js'),
     ConfigXmlHelper = require('./configXmlHelper.js'),
+    DEFAULT_NAME = 'default',
     DEFAULT_SCHEME = 'http';
 
   module.exports = {
@@ -79,7 +80,7 @@ Parser for config.xml file. Read plugin-specific preferences (from <universal-li
   function constructHostEntry(xmlElement) {
     var host = {
         scheme: DEFAULT_SCHEME,
-        name: '',
+        name: DEFAULT_NAME,
         paths: []
       },
       hostProperties = xmlElement['$'];
@@ -89,7 +90,7 @@ Parser for config.xml file. Read plugin-specific preferences (from <universal-li
     }
 
     // read host name
-    host.name = hostProperties.name;
+    host.name = hostProperties.name || DEFAULT_NAME;
 
     // read scheme if defined
     if (hostProperties['scheme'] != null) {

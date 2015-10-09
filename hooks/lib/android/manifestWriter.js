@@ -4,6 +4,7 @@ Class injects plugin preferences into AndroidManifest.xml file.
 (function() {
 
   var path = require('path'),
+    DEFAULT_NAME = 'default',
     xmlHelper = require('../xmlHelper.js');
 
   module.exports = {
@@ -151,7 +152,7 @@ Class injects plugin preferences into AndroidManifest.xml file.
 
     var dataHost = data[0]['$']['android:host'],
       dataScheme = data[0]['$']['android:scheme'],
-      hostIsSet = dataHost != null && dataHost.length > 0,
+      hostIsSet = true, // STI: changed from: dataHost != null && dataHost.length > 0,
       schemeIsSet = dataScheme != null && dataScheme.length > 0;
 
     return hostIsSet && schemeIsSet;
@@ -273,11 +274,15 @@ Class injects plugin preferences into AndroidManifest.xml file.
       }],
       'data': [{
         '$': {
-          'android:host': host,
           'android:scheme': scheme
         }
       }]
     };
+    
+    // if this is the default host (empty host), dont add it
+    if (host && host != DEFAULT_NAME) {
+      intentFilter['data'][0]['$']['android:host'] = host;
+    }
 
     injectPathComponentIntoIntentFilter(intentFilter, pathName);
 

@@ -26,6 +26,11 @@ import java.util.List;
  * Communicates with the JS side, handles launch intents and so on.
  */
 public class UniversalLinksPlugin extends CordovaPlugin {
+  
+    private static final String LOG_TAG = "CUL";
+
+    // default scheme for the host
+    private static final String DEFAULT_NAME = "default";
 
     // list of hosts, defined in config.xml
     private List<ULHost> supportedHosts;
@@ -37,13 +42,20 @@ public class UniversalLinksPlugin extends CordovaPlugin {
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+        Log.d(LOG_TAG, "initialize");
         super.initialize(cordova, webView);
 
         supportedHosts = new ULConfigXmlParser(cordova.getActivity()).parse();
+        Log.d(LOG_TAG, "initialize : "+ supportedHosts.toString());
+        for (ULHost supportedHost : supportedHosts) {
+            Log.d(LOG_TAG, "initialize name: '" + supportedHost.getName() + "'");
+            Log.d(LOG_TAG, "initialize scheme: '" + supportedHost.getScheme() + "'");
+        }
     }
 
     @Override
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
+        Log.d(LOG_TAG, "execute: " +action);
         boolean isHandled = true;
         if (JSAction.INIT.equals(action)) {
             initJS(callbackContext);
@@ -52,6 +64,27 @@ public class UniversalLinksPlugin extends CordovaPlugin {
         }
 
         return isHandled;
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+      Log.d(LOG_TAG, "onNewIntent intentString: " + intent.getDataString());
+      Log.d(LOG_TAG, "onNewIntent intentUri: " + intent.getData().toString());
+      if (supportedHosts == null || supportedHosts.size() == 0) {
+          return;
+      }
+
+      // read intent
+      String action = intent.getAction();
+      Uri intentUri = intent.getData();
+
+      // if app was not launched by the url - ignore
+      if (!Intent.ACTION_VIEW.equals(action) || intentUri == null) {
+          return;
+      }
+
+      // process url
+      processURL(intentUri);
     }
 
     // endregion
@@ -125,9 +158,11 @@ public class UniversalLinksPlugin extends CordovaPlugin {
      * @param launchUri url that started the app
      */
     private void processURL(Uri launchUri) {
+        Log.d(LOG_TAG, "Host '" + launchUri.getHost() + "'");
+        Log.d(LOG_TAG, "scheme '" + launchUri.getScheme() + "'");
         ULHost host = findHostByUrl(launchUri);
         if (host == null) {
-            Log.d("CUL", "Host " + launchUri.getHost() + " is not supported");
+            Log.d(LOG_TAG, "Host '" + launchUri.getHost() + "' is not supported");
             return;
         }
 
@@ -142,8 +177,12 @@ public class UniversalLinksPlugin extends CordovaPlugin {
      */
     private ULHost findHostByUrl(Uri url) {
         ULHost host = null;
+        String name = (url.getHost() == null || url.getHost() == "") ? DEFAULT_NAME : url.getHost();
+        String scheme = url.getScheme();
         for (ULHost supportedHost : supportedHosts) {
-            if (supportedHost.getName().equals(url.getHost())) {
+            Log.d(LOG_TAG, "testing name: '" + supportedHost.getName() + "'");
+            Log.d(LOG_TAG, "testing scheme: '" + supportedHost.getScheme() + "'");
+            if (supportedHost.getName().equals(name) && supportedHost.getScheme().equals(scheme) ) {
                 host = supportedHost;
                 break;
             }

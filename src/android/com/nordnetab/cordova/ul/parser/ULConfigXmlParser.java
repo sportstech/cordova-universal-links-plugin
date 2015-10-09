@@ -1,6 +1,7 @@
 package com.nordnetab.cordova.ul.parser;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.nordnetab.cordova.ul.model.ULHost;
 import com.nordnetab.cordova.ul.model.ULPath;

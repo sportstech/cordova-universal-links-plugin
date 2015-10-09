@@ -16,6 +16,9 @@ public class ULHost {
     // default scheme for the host
     private static final String DEFAULT_SCHEME = "http";
 
+    // default scheme for the host
+    private static final String DEFAULT_NAME = "default";
+
     private final List<ULPath> paths;
     private final String name;
     private final String scheme;
@@ -29,7 +32,7 @@ public class ULHost {
      * @param event  event that corresponds to this host
      */
     public ULHost(final String name, final String scheme, final String event) {
-        this.name = name;
+        this.name = (name == null || name == "") ? DEFAULT_NAME : name;
         this.scheme = (scheme == null) ? DEFAULT_SCHEME : scheme;
         this.event = (event == null) ? DEFAULT_EVENT : event;
         this.paths = new ArrayList<ULPath>();
