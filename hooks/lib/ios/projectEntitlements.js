@@ -124,9 +124,14 @@ Script only generates content. File it self is included in the xcode project in 
 
     // generate list of host links
     pluginPreferences.forEach(function(host) {
-      link = domainsListEntryForHost(host);
-      domainsList.push(link);
+      if (/http/.test(host.scheme)) {
+        link = domainsListEntryForHost(host);
+        domainsList.push(link);
+      }
     });
+    
+    // add the branch domain
+    domainsList.push('applinks:bnc.lt');
 
     return {
       'key': [ASSOCIATED_DOMAINS],

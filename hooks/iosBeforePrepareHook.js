@@ -22,25 +22,64 @@ function run(ctx) {
     iosProjectFilePath = path.join(projectRoot, 'platforms', 'ios'),
     configXmlHelper = new ConfigXmlHelper(ctx),
     oldProjectName = getOldProjectName(iosProjectFilePath),
-    newProjectName = configXmlHelper.getProjectName();
+    newProjectName = configXmlHelper.getProjectName()
+    ,munge = require('./lib/munge.js')
+    ,configParser = require('./lib/configXmlParser.js')
+    ,pluginPreferences = configParser.readPreferences(ctx)
+    ,nameHasNotChanged = oldProjectName.length > 0 && oldProjectName === newProjectName
+  ;
 
   // if name has not changed - do nothing
-  if (oldProjectName.length > 0 && oldProjectName === newProjectName) {
-    return;
+  if (!nameHasNotChanged) {
+    console.log('Project name has changed. Renaming .entitlements file.');
+
+    // if it does - rename it
+    var oldEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', oldProjectName + '.entitlements'),
+      newEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', newProjectName + '.entitlements');
+
+    try {
+      fs.renameSync(oldEntitlementsFilePath, newEntitlementsFilePath);
+    } catch (err) {
+      console.warn('Failed to rename .entitlements file.');
+      console.warn(err);
+    }
   }
-
-  console.log('Project name has changed. Renaming .entitlements file.');
-
-  // if it does - rename it
-  var oldEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', oldProjectName + '.entitlements'),
-    newEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', newProjectName + '.entitlements');
-
-  try {
-    fs.renameSync(oldEntitlementsFilePath, newEntitlementsFilePath);
-  } catch (err) {
-    console.warn('Failed to rename .entitlements file.');
-    console.warn(err);
+  
+  var schemes = [], mungeValue;
+  var plistString = "<array><dict>";
+  plistString += "<key>CFBundleTypeRole</key><string>Editor</string>";
+  plistString += "<key>CFBundleURLIconFile</key><string>icon</string>";
+  plistString += "<key>CFBundleURLName</key><string>" + configXmlHelper.getPackageName() + "</string>";
+  // generate list of host links
+  pluginPreferences.forEach(function(host) {
+    if (!/http/.test(host.scheme) && schemes.indexOf(host.scheme) == -1) {
+      schemes.push(host.scheme)
+    }
+  });
+  plistString += "<key>CFBundleURLSchemes</key><array>";
+  schemes.forEach(function (scheme) {
+    plistString += "<string>" + scheme +"</string>"
+  })
+  plistString += "</array></dict></array>"
+  if (schemes.length > 0) {
+    mungeValue = {
+      "xml": plistString,
+      "count": 1
+    }
+  } else {
+    mungeValue = {}
   }
+  // console.log("mungeValue", mungeValue)
+  munge( ctx, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
+  
+  // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
+  // https://github.com/m1r4ge/cordova-lib/commit/b3d38a777cef08d751e0a00aa9fbb6f455de2fe4
+  var
+    p = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
+    ,jsConents = fs.readFileSync(p, 'utf8')
+  ;
+  jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
+  fs.writeFileSync(p, jsConents, 'utf8');
 }
 
 // region Private API
