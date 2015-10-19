@@ -45,41 +45,45 @@ function run(ctx) {
     }
   }
   
-  var schemes = [], mungeValue;
-  var plistString = "<array><dict>";
-  plistString += "<key>CFBundleTypeRole</key><string>Editor</string>";
-  plistString += "<key>CFBundleURLIconFile</key><string>icon</string>";
-  plistString += "<key>CFBundleURLName</key><string>" + configXmlHelper.getPackageName() + "</string>";
-  // generate list of host links
-  pluginPreferences.forEach(function(host) {
-    if (!/http/.test(host.scheme) && schemes.indexOf(host.scheme) == -1) {
-      schemes.push(host.scheme)
+  if (ctx.opts.platforms.indexOf('ios') > -1) {
+    var schemes = [], mungeValue;
+    var plistString = "<array><dict>";
+    plistString += "<key>CFBundleTypeRole</key><string>Editor</string>";
+    plistString += "<key>CFBundleURLIconFile</key><string>icon</string>";
+    plistString += "<key>CFBundleURLName</key><string>" + configXmlHelper.getPackageName() + "</string>";
+    // generate list of host links
+    pluginPreferences.forEach(function(host) {
+      if (!/http/.test(host.scheme) && schemes.indexOf(host.scheme) == -1) {
+        schemes.push(host.scheme)
+      }
+    });
+    plistString += "<key>CFBundleURLSchemes</key><array>";
+    schemes.forEach(function (scheme) {
+      plistString += "<string>" + scheme +"</string>"
+    })
+    plistString += "</array></dict></array>"
+    if (schemes.length > 0) {
+      mungeValue = {
+        "xml": plistString,
+        "count": 1
+      }
+    } else {
+      mungeValue = {}
     }
-  });
-  plistString += "<key>CFBundleURLSchemes</key><array>";
-  schemes.forEach(function (scheme) {
-    plistString += "<string>" + scheme +"</string>"
-  })
-  plistString += "</array></dict></array>"
-  if (schemes.length > 0) {
-    mungeValue = {
-      "xml": plistString,
-      "count": 1
-    }
-  } else {
-    mungeValue = {}
+    // console.log("mungeValue", mungeValue)
+    munge( ctx, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
+    
+    // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
+    // https://github.com/m1r4ge/cordova-lib/commit/b3d38a777cef08d751e0a00aa9fbb6f455de2fe4
+    var
+      p = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
+      ,jsConents = fs.readFileSync(p, 'utf8')
+    ;
+    jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
+    fs.writeFileSync(p, jsConents, 'utf8');
   }
-  // console.log("mungeValue", mungeValue)
-  munge( ctx, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
   
-  // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
-  // https://github.com/m1r4ge/cordova-lib/commit/b3d38a777cef08d751e0a00aa9fbb6f455de2fe4
-  var
-    p = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
-    ,jsConents = fs.readFileSync(p, 'utf8')
-  ;
-  jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
-  fs.writeFileSync(p, jsConents, 'utf8');
+  
 }
 
 // region Private API
