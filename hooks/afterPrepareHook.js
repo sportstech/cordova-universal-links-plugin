@@ -7,9 +7,7 @@ data you have specified in the projects config.xml file.
 
 var configParser = require('./lib/configXmlParser.js'),
   androidManifestWriter = require('./lib/android/manifestWriter.js'),
-  androidWebHook = require('./lib/android/webSiteHook.js'),
   iosProjectEntitlements = require('./lib/ios/projectEntitlements.js'),
-  iosAppSiteAssociationFile = require('./lib/ios/appleAppSiteAssociationFile.js'),
   iosProjectPreferences = require('./lib/ios/xcodePreferences.js'),
   ANDROID = 'android',
   IOS = 'ios';
@@ -57,9 +55,6 @@ function run(cordovaContext) {
 function activateUniversalLinksInAndroid(cordovaContext, pluginPreferences) {
   // inject preferenes into AndroidManifest.xml
   androidManifestWriter.writePreferences(cordovaContext, pluginPreferences);
-
-  // generate html file with the <link> tags that you should inject on the website.
-  androidWebHook.generate(cordovaContext, pluginPreferences);
 }
 
 /**
@@ -74,7 +69,4 @@ function activateUniversalLinksInIos(cordovaContext, pluginPreferences) {
 
   // generate entitlements file
   iosProjectEntitlements.generateAssociatedDomainsEntitlements(cordovaContext, pluginPreferences);
-
-  // generate apple-site-association-file
-  iosAppSiteAssociationFile.generate(cordovaContext, pluginPreferences);
 }
