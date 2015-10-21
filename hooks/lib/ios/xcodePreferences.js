@@ -10,8 +10,6 @@ Which is:
 
   var path = require('path'),
     ConfigXmlHelper = require('../configXmlHelper.js'),
-    // pbxFile = require('xcode/lib/pbxFile'),
-    IOS_DEPLOYMENT_TARGET = '9.0',
     COMMENT_KEY = /_comment$/,
     context;
 
@@ -60,7 +58,6 @@ Which is:
 
     for (config in configurations) {
       buildSettings = configurations[config].buildSettings;
-      buildSettings['IPHONEOS_DEPLOYMENT_TARGET'] = IOS_DEPLOYMENT_TARGET;
       buildSettings['CODE_SIGN_ENTITLEMENTS'] = '"' + entitlementsFilePath + '"';
     }
     console.log('IOS project now has deployment target set as: ' + IOS_DEPLOYMENT_TARGET);
