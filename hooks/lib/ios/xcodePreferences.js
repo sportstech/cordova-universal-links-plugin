@@ -60,7 +60,6 @@ Which is:
       buildSettings = configurations[config].buildSettings;
       buildSettings['CODE_SIGN_ENTITLEMENTS'] = '"' + entitlementsFilePath + '"';
     }
-    console.log('IOS project now has deployment target set as: ' + IOS_DEPLOYMENT_TARGET);
     console.log('IOS project Code Sign Entitlements now set to: ' + entitlementsFilePath);
   }
 
