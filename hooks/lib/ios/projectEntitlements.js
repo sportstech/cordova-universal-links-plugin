@@ -12,6 +12,8 @@ Script only generates content. File it self is included in the xcode project in 
     xmlHelper = require('../xmlHelper.js'),
     ConfigXmlHelper = require('../configXmlHelper.js'),
     ASSOCIATED_DOMAINS = 'com.apple.developer.associated-domains',
+    ICLOUD_KEY = 'com.apple.developer.icloud-container-identifiers',
+    APP_GROUPS_KEY = 'com.apple.security.application-groups',
     context,
     projectRoot,
     projectName,
@@ -98,8 +100,9 @@ Script only generates content. File it self is included in the xcode project in 
    */
   function injectPreferences(currentEntitlements, pluginPreferences) {
     var newEntitlements = currentEntitlements,
-      dictIndex = indexOfAssociatedDomainsDictionary(newEntitlements),
-      content = generateAssociatedDomainsContent(pluginPreferences);
+      dictIndex = indexOfAssociatedDomainsDictionary(newEntitlements, ASSOCIATED_DOMAINS),
+      content = generateAssociatedDomainsContent(pluginPreferences)
+    ;
 
     // if associated-domains entry was not found in entitlements file - add it;
     // if was - replace it with the new version
@@ -107,6 +110,20 @@ Script only generates content. File it self is included in the xcode project in 
       newEntitlements.plist.dict.push(content);
     } else {
       newEntitlements.plist.dict[dictIndex] = content;
+    }
+    // if (indexOfAssociatedDomainsDictionary(newEntitlements, ICLOUD_KEY) < 0) {
+    //   newEntitlements.plist.dict.push({
+    //     'key': [ICLOUD_KEY],
+    //     'array': []
+    //   });
+    // }
+    if (indexOfAssociatedDomainsDictionary(newEntitlements, APP_GROUPS_KEY) < 0) {
+      newEntitlements.plist.dict.push({
+        'key': [APP_GROUPS_KEY],
+        'array': [{
+          string: 'group.com.fusedraft'
+        }]
+      });
     }
 
     return newEntitlements;
@@ -157,14 +174,14 @@ Script only generates content. File it self is included in the xcode project in 
    * @param {Object} entitlements - entitlements file content
    * @return {Integer} index of the associated-domains dictionary; -1 - if none was found
    */
-  function indexOfAssociatedDomainsDictionary(entitlements) {
+  function indexOfAssociatedDomainsDictionary(entitlements, key) {
     if (entitlements['plist'] == null || entitlements.plist['dict'] == null) {
       return -1;
     }
 
     var index = -1;
     entitlements.plist.dict.some(function(dictionary, dictIndex) {
-      if (dictionary.key == ASSOCIATED_DOMAINS) {
+      if (dictionary.key == key) {
         index = dictIndex;
         return true;
       }
