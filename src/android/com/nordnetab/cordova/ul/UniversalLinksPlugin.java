@@ -38,6 +38,8 @@ public class UniversalLinksPlugin extends CordovaPlugin {
     // callback through which we will send events to JS
     private CallbackContext defaultCallback;
 
+    private JSMessage storedMessage;
+
     // region Public API
 
     @Override
@@ -68,23 +70,7 @@ public class UniversalLinksPlugin extends CordovaPlugin {
 
     @Override
     public void onNewIntent(Intent intent) {
-      Log.d(LOG_TAG, "onNewIntent intentString: " + intent.getDataString());
-      Log.d(LOG_TAG, "onNewIntent intentUri: " + intent.getData().toString());
-      if (supportedHosts == null || supportedHosts.size() == 0) {
-          return;
-      }
-
-      // read intent
-      String action = intent.getAction();
-      Uri intentUri = intent.getData();
-
-      // if app was not launched by the url - ignore
-      if (!Intent.ACTION_VIEW.equals(action) || intentUri == null) {
-          return;
-      }
-
-      // process url
-      processURL(intentUri);
+        handleIntent(intent);
     }
 
     // endregion
@@ -98,7 +84,13 @@ public class UniversalLinksPlugin extends CordovaPlugin {
      */
     private void initJS(CallbackContext callback) {
         setDefaultCallback(callback);
-        handleLaunchIntent();
+        if (storedMessage != null) {
+            sendMessageToJs(storedMessage);
+            storedMessage = null;
+            return;
+        }
+
+        handleIntent(cordova.getActivity().getIntent());
     }
 
     private void setDefaultCallback(CallbackContext callback) {
@@ -106,21 +98,21 @@ public class UniversalLinksPlugin extends CordovaPlugin {
     }
 
     /**
-     * Send event to JS side.
+     * Send message to JS side.
      *
-     * @param host             host entry which corresponds to the launch link
-     * @param correspondingUri link from which our app has been started
+     * @param message message to send
+     * @return true - if message is sent; otherwise - false
      */
-    private void sendEventToJs(ULHost host, Uri correspondingUri) {
+    private boolean sendMessageToJs(JSMessage message) {
         if (defaultCallback == null) {
-            return;
+            return false;
         }
 
-        final JSMessage message = new JSMessage(host, correspondingUri);
         final PluginResult result = new PluginResult(PluginResult.Status.OK, message);
         result.setKeepCallback(true);
-
         defaultCallback.sendPluginResult(result);
+
+        return true;
     }
 
     // endregion
@@ -128,16 +120,17 @@ public class UniversalLinksPlugin extends CordovaPlugin {
     // region Intent handling
 
     /**
-     * Read data from the launch intent.
-     * If we started the app from the link - try to process that.
+     * Handle launch intent.
+     * If it is an UL intent - then event will be dispatched to the JS side.
+     *
+     * @param intent launch intent
      */
-    private void handleLaunchIntent() {
-        if (supportedHosts == null || supportedHosts.size() == 0) {
+    private void handleIntent(Intent intent) {
+        if (intent == null || supportedHosts == null || supportedHosts.size() == 0) {
             return;
         }
 
         // read intent
-        Intent intent = cordova.getActivity().getIntent();
         String action = intent.getAction();
         Uri launchUri = intent.getData();
 
@@ -146,27 +139,23 @@ public class UniversalLinksPlugin extends CordovaPlugin {
             return;
         }
 
-        // process url
-        processURL(launchUri);
-    }
-
-    /**
-     * Handle launch url.
-     * We will try to match it to the ones that were defined in config.xml.
-     * If matched - event will be send to JS.
-     *
-     * @param launchUri url that started the app
-     */
-    private void processURL(Uri launchUri) {
-        Log.d(LOG_TAG, "Host '" + launchUri.getHost() + "'");
-        Log.d(LOG_TAG, "scheme '" + launchUri.getScheme() + "'");
+        // try to find host in the hosts list from the config.xml
         ULHost host = findHostByUrl(launchUri);
+		Log.d(LOG_TAG, "Host '" + launchUri.getHost() + "'");
+        Log.d(LOG_TAG, "scheme '" + launchUri.getScheme() + "'");
         if (host == null) {
             Log.d(LOG_TAG, "Host '" + launchUri.getHost() + "' is not supported");
             return;
         }
 
-        sendEventToJs(host, launchUri);
+        // send message to the JS side;
+        // if callback is not yet initialized - store message for later use;
+        final JSMessage message = new JSMessage(host, launchUri);
+        if (!sendMessageToJs(message)) {
+            storedMessage = message;
+        } else {
+            storedMessage = null;
+        }
     }
 
     /**

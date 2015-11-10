@@ -11,7 +11,7 @@ Integration process is simple:
 2. Define supported hosts and paths in Cordova's `config.xml` (see [Cordova config preferences](#cordova-config-preferences)).
 3. Write some JavaScript code to listen for application launch by the links (see [Application launch handling](#application-launch-handling)).
 4. Build project from the CLI.
-5. Activate support for UL on your website (see [Android web integration](#android-web-integration) and [iOS web integration](#configuring-ios-application)).
+5. Activate support for UL on your website (see [Android web integration](#android-web-integration) and [iOS web integration](#ios-web-integration)).
 6. Test it (see [Test UL for Android locally](#testing-ul-for-android-locally) and [Testing iOS application](#testing-ios-application)).
 
 It is important not only to redirect users to your app from the web, but also provide them with the information they were looking for. For example, if someone clicks on `http://mysite.com/news` and get redirected in the app - they are probably hoping to see the `news` page in it. The plugin will help developers with that. In `config.xml` you can specify an event name that is dispatched when user opens the app from the certain link. This way, the appropriate method of your web project will be called, and you can show to user the requested content.
@@ -27,15 +27,19 @@ It is important not only to redirect users to your app from the web, but also pr
 - [Cordova config preferences](#cordova-config-preferences)
 - [Application launch handling](#application-launch-handling)
 - [Android web integration](#android-web-integration)
+  - [Modify web pages](#modify-web-pages)
+  - [Verify your website on Webmaster Tools](#verify-your-website-on-webmaster-tools)
+  - [Connect your app in the Google Play console](#connect-your-app-in-the-google-play-console)
 - [Testing UL for Android locally](#testing-ul-for-android-locally)
 - [iOS web integration](#ios-web-integration)
-  - [Activating UL support in member center](#activating-ul-support-in-member-center)
-  - [Configuring apple-app-site-association file for website](#configuring-apple-app-site-association-file-for-website)
+  - [Activate UL support in member center](#activate-ul-support-in-member-center)
+  - [Configure apple-app-site-association file for website](#configure-apple-app-site-association-file-for-website)
 - [Testing iOS application](#testing-ios-application)
+- [Useful notes on Universal Links for iOS](#useful-notes-on-universal-links-for-ios)
 - [Additional documentation links](#additional-documentation-links)
 
 ### Installation
-This requires cordova 5.0+ (current stable 1.0.0)
+This requires cordova 5.0+ (current stable 1.0.1)
 
 ```sh
 cordova plugin add cordova-universal-links-plugin
@@ -346,9 +350,17 @@ That's it! Now, by default for `myhost.com` links `onApplicationDidLaunchFromLin
 
 ### Android web integration
 
-If you have already tried to use `adb` to simulate application launch from the link - you probably saw chooser dialog with at least two applications in it: browser and your app. This happens because web content can be handled by multiple things. To prevent this from happening you need to activate app indexing. App indexing is the second part of deep linking, where you link that URI/URL between Google and your app. Even when users do a Google search, search results can bring them back to the app.
+If you have already tried to use `adb` to simulate application launch from the link - you probably saw chooser dialog with at least two applications in it: browser and your app. This happens because web content can be handled by multiple things. To prevent this from happening you need to activate app indexing. App indexing is the second part of deep linking, where you link that URI/URL between Google and your app.
 
-More details on that could be found in the [official documentation](https://developer.android.com/training/app-indexing/enabling-app-indexing.html). But long story short - you need to include proper `<link />` tags in the `<head />` section of your website.
+Integration process consists of three steps:
+
+1. Modify your web pages by adding special `<link />` tags in the `<head />` section.
+2. Verify your website on Webmaster Tools.
+3. Connect your app in the Google Play console.
+
+#### Modify web pages
+
+To create a link between your mobile content and the page on the website you need to include proper `<link />` tags in the `<head />` section of your website.
 
 Link tag is constructed like so:
 
@@ -357,6 +369,7 @@ Link tag is constructed like so:
       href="android-app://<package_name>/<scheme>/<host><path>" />
 ```
 
+where:
 - `<package_name>` - your application's package name;
 - `<scheme>` - url scheme;
 - `<host>` - hostname;
@@ -388,6 +401,14 @@ Good news is that **plugin generates those tags for you**. When you run `cordova
 
 So, instead of manually writing them down - you can take them from that file and put on the website.
 
+#### Verify your website on Webmaster Tools
+
+If your website is brand new, you’ll want to verify it through [Webmaster Tools](https://www.google.com/webmasters/tools/). That’s how the Google crawler knows that it’s there and can index it to do everything it needs to do. In order to do that - just add your website in the console and follow the instructions to versify, that you own the site. Most likely, they will ask you to add something on your page.
+
+#### Connect your app in the Google Play console
+
+Next, you’ll want to connect your app using the Google Play Console so the app indexing starts working. If you go to your app, there’s a menu that says `Services and API` in which you can click `Verify Website`, and provide the URL to check that it has the appropriate tags in the HTML. Once that’s all set up, it will start showing in search results.
+
 ### Testing UL for Android locally
 
 To test Android application for Deep Linking support you just need to execute the following command in the console:
@@ -402,7 +423,7 @@ where
 - `<URI>` - url that you want to test;
 - `<PACKAGE>` - your application's package name.
 
-**Note:** if you didn't configure your website for UL support - then most likely after executing the `adb` command you will see a chooser dialog with multiple applications (at least browser and your test app). This happens because you are trying to view web content, and this can be handled by several applications. Just choose your app and proceed. If you configured your website as [described above](#configuring-for-android) - then no dialog is shown and your application will be launched directly.
+**Note:** if you didn't configure your website for UL support - then most likely after executing the `adb` command you will see a chooser dialog with multiple applications (at least browser and your test app). This happens because you are trying to view web content, and this can be handled by several applications. Just choose your app and proceed. If you configured your website as [described above](#android-web-integration) - then no dialog is shown and your application will be launched directly.
 
 Let's create new application to play with:
 1. Create new Cordova project and add Android platform to it:
@@ -470,7 +491,7 @@ In the case of iOS integration of the Universal Links is a little harder. It con
 
 First one you will have to do manually, but plugin will help you with the second step.
 
-#### Activating UL support in member center
+#### Activate UL support in member center
 
 1. Go to your [developer console](https://developers.apple.com). Click on `Certificate, Identifiers & Profiles` and then on `Identifiers`.
 
@@ -486,7 +507,7 @@ First one you will have to do manually, but plugin will help you with the second
 
 Now your App ID is registered and has `Associated Domains` feature.
 
-#### Configuring apple-app-site-association file for website
+#### Configure apple-app-site-association file for website
 
 In order for Universal Links to work - you need to associate your application with the certain domain. For that you need to:
 
@@ -598,7 +619,7 @@ But if you don't want to... well, there is one way to skip it. You can use [bran
 
 Step-by-step guide:
 
-1. Go to developer console and register your App ID, as described in [Activating UL support in member center](#activating-ul-support-in-member-center).
+1. Go to developer console and register your App ID, as described in [Activating UL support in member center](#activate-ul-support-in-member-center).
 
 2. Register account on [branch.io](https://dashboard.branch.io/), if you don't have it yet.
 
@@ -649,12 +670,31 @@ Step-by-step guide:
 
   Now click on your link. Application should be launched. If not - check all the steps above. Also, check your provisioning profiles in Xcode.
 
+### Useful notes on Universal Links for iOS
+
+First of all, you need to understand how the Universal Links works. When user clicks on the link - Safari checks, if any of the installed apps can handle it. If app is found - Safari starts it, if not - link opened as usually in the browser.
+
+Now, let's assume you have a following setup in `config.xml`:
+```xml
+<universal-links>
+  <host name="mywebsite.com">
+    <path url="/some/page.html" />
+  </host>
+</universal-links>
+```
+By this we state, that our app should handle `http://mywebsite.com/some/page.html` link. So, if user clicks on `http://mywebsite.com` - application would not launch. And this is totally as you want it to be. Now comes the interesting part: if user opens `http://mywebsite.com` in the Safari and then presses on `http://mywebsite.com/some/page.html` link - application is not gonna start, he will stay in the browser. And at the top of that page he will see a Smart Banner. To launch the application user will have to click on that banner. And this is a normal behaviour from iOS. If user already viewing your website in the browser - he doesn't want to leave it, when he clicks on some link, that leads on the page inside your site. But if he clicks on the `http://mywebsite.com/some/page.html` link from some other source - then it will start your application.
+
+Another thing that every developer should be aware of:
+
+When a user is in an app, opened by Universal Links - a return to browser option will persist at the top of the screen (i.e. `mywebsite.com`). Users who have clicked the `mywebsite.com` option will be taken to their Safari browser, and Smart Banner is persistently rendered on the top of the window. This banner has an `OPEN` call to action. For all future clicks of URLs, associated with this app via Universal Links, the app will never be launched again for the user, and the user will continue being redirected to the Safari page with the banner. If the user clicks `OPEN` - then the app will be launched, and all future clicks of the URL will deep linking the user to the app.
+
 ### Additional documentation links
 
 **Android:**
+- [Video tutorial on Android App Indexing](https://realm.io/news/juan-gomez-android-app-indexing/)
 - [Enable Deep Linking on Android](https://developer.android.com/training/app-indexing/deep-linking.html)
 - [Specifying App Content for Indexing](https://developer.android.com/training/app-indexing/enabling-app-indexing.html)
-- [Video tutorial on Android App Indexing](https://realm.io/news/juan-gomez-android-app-indexing/)
+- [Documentation on enabling App Indexing on the website](https://developers.google.com/app-indexing/android/publish#host-your-links)
 
 **iOS:**
 - [Apple documentation on Universal Links](https://developer.apple.com/library/ios/documentation/General/Conceptual/AppSearch/UniversalLinks.html)
