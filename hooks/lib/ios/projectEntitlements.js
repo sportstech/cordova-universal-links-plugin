@@ -117,14 +117,14 @@ Script only generates content. File it self is included in the xcode project in 
     //     'array': []
     //   });
     // }
-    if (indexOfAssociatedDomainsDictionary(newEntitlements, APP_GROUPS_KEY) < 0) {
-      newEntitlements.plist.dict.push({
-        'key': [APP_GROUPS_KEY],
-        'array': [{
-          string: 'group.com.fusedraft'
-        }]
-      });
-    }
+    // if (indexOfAssociatedDomainsDictionary(newEntitlements, APP_GROUPS_KEY) < 0) {
+    //   newEntitlements.plist.dict.push({
+    //     'key': [APP_GROUPS_KEY],
+    //     'array': [{
+    //       string: 'group.com.fusedraft'
+    //     }]
+    //   });
+    // }
 
     return newEntitlements;
   }
