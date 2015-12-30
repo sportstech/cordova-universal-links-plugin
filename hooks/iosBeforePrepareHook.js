@@ -6,7 +6,10 @@ If file name has no changed - hook would not do anything.
 
 var path = require('path'),
   fs = require('fs'),
-  ConfigXmlHelper = require('./lib/configXmlHelper.js');
+  ConfigXmlHelper = require('./lib/configXmlHelper.js')
+  ,munge = require('./lib/munge.js')
+  ,configParser = require('./lib/configXmlParser.js')
+;
 
 module.exports = function(ctx) {
   run(ctx);
@@ -15,17 +18,15 @@ module.exports = function(ctx) {
 /**
  * Run the hook logic.
  *
- * @param {Object} ctx - cordova context object
+ * @param {Object} cordovaContext - cordova context object
  */
-function run(ctx) {
-  var projectRoot = ctx.opts.projectRoot,
+function run(cordovaContext) {
+  var projectRoot = cordovaContext.opts.projectRoot,
     iosProjectFilePath = path.join(projectRoot, 'platforms', 'ios'),
-    configXmlHelper = new ConfigXmlHelper(ctx),
+    configXmlHelper = new ConfigXmlHelper(cordovaContext),
     oldProjectName = getOldProjectName(iosProjectFilePath),
     newProjectName = configXmlHelper.getProjectName()
-    ,munge = require('./lib/munge.js')
-    ,configParser = require('./lib/configXmlParser.js')
-    ,pluginPreferences = configParser.readPreferences(ctx)
+    ,pluginPreferences = configParser.readPreferences(cordovaContext)
     ,nameHasNotChanged = oldProjectName.length > 0 && oldProjectName === newProjectName
   ;
 
@@ -45,14 +46,14 @@ function run(ctx) {
     }
   }
   
-  if (ctx.opts.platforms.indexOf('ios') > -1) {
+  if (cordovaContext.opts.platforms.indexOf('ios') > -1) {
     var schemes = [], mungeValue;
     var plistString = "<array><dict>";
     plistString += "<key>CFBundleTypeRole</key><string>Editor</string>";
     plistString += "<key>CFBundleURLIconFile</key><string>icon</string>";
     plistString += "<key>CFBundleURLName</key><string>" + configXmlHelper.getPackageName() + "</string>";
     // generate list of host links
-    pluginPreferences.forEach(function(host) {
+    pluginPreferences.hosts.forEach(function(host) {
       if (!/http/.test(host.scheme) && schemes.indexOf(host.scheme) == -1) {
         schemes.push(host.scheme)
       }
@@ -71,7 +72,7 @@ function run(ctx) {
       mungeValue = {}
     }
     // console.log("mungeValue", mungeValue)
-    munge( ctx, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
+    munge( cordovaContext, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
     
     // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
     // https://github.com/m1r4ge/cordova-lib/commit/b3d38a777cef08d751e0a00aa9fbb6f455de2fe4
