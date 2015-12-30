@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<plugin id="cordova-universal-links-plugin" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+<plugin id="cordova-universal-links-plugin" version="1.1.0" xmlns="http://apache.org/cordova/ns/plugins/1.0">
 
   <name>Universal Links Plugin</name>
   <description>
     Cordova plugin to add in your application support for Universal Links (iOS 9) and Deep Links (Android).
     Basically, open application through the link in the browser.
   </description>
-  <license>Apache 2.0</license>
+  <license>MIT</license>
   <keywords>cordova,links,universal</keywords>
 
   <repo>https://github.com/nordnet/cordova-universal-links-plugin</repo>
@@ -25,7 +25,7 @@
 
 <!-- Hooks -->
   <hook src="hooks/afterPrepareHook.js" type="after_prepare"/>
-  <hook src="hooks/afterPluginAddHook.js" type="after_plugin_add"/>
+  <hook src="hooks/beforePluginInstallHook.js" type="before_plugin_install" />
 
   <platform name="ios">
     <hook src="hooks/iosBeforePrepareHook.js" type="before_prepare" />
@@ -49,6 +49,9 @@
 <!-- sources for JS folder -->
     <source-file src="src/ios/JS/CDVPluginResult+CULPlugin.m" target-dir="JS/"/>
     <header-file src="src/ios/JS/CDVPluginResult+CULPlugin.h" target-dir="JS/"/>
+
+    <source-file src="src/ios/JS/CDVInvokedUrlCommand+CULPlugin.m" target-dir="JS/"/>
+    <header-file src="src/ios/JS/CDVInvokedUrlCommand+CULPlugin.h" target-dir="JS/"/>
 
 <!-- sources for Model folder -->
     <source-file src="src/ios/Model/CULHost.m" target-dir="Model/"/>

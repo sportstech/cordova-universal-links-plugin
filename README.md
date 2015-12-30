@@ -20,10 +20,12 @@ It is important not only to redirect users to your app from the web, but also pr
 
 ## Supported Platforms
 - Android 4.0.0 or above.
-- iOS 9.0 or above. Xcode 7 is required.
+- iOS 8.0 or above. Xcode 7 is required. To build plugin with Xcode 6 - [read the instructions](#how-to-build-plugin-in-xcode-6) below.
 
 ## Documentation
 - [Installation](#installation)
+- [Migrating from previous versions](#migrating-from-previous-versions)
+- [How to build plugin in Xcode 6](#how-to-build-plugin-in-xcode-6)
 - [Cordova config preferences](#cordova-config-preferences)
 - [Application launch handling](#application-launch-handling)
 - [Android web integration](#android-web-integration)
@@ -39,7 +41,7 @@ It is important not only to redirect users to your app from the web, but also pr
 - [Additional documentation links](#additional-documentation-links)
 
 ### Installation
-This requires cordova 5.0+ (current stable 1.0.1)
+This requires cordova 5.0+ (current stable 1.1.0)
 
 ```sh
 cordova plugin add cordova-universal-links-plugin
@@ -50,6 +52,77 @@ It is also possible to install via repo url directly (**unstable**)
 ```sh
 cordova plugin add https://github.com/nordnet/cordova-universal-links-plugin.git
 ```
+
+### Migrating from previous versions
+
+##### From v1.0.x to v1.1.x
+
+In v1.0.x to capture universal links events you had to subscribe on them like so:
+```js
+document.addEventListener('eventName', didLaunchAppFromLink, false);
+
+function didLaunchAppFromLink(event) {
+  var urlData = event.detail;
+  console.log('Did launch application from the link: ' + urlData.url);
+  // do some work
+}
+```
+And there were some problems with the timing: event could be fired long before you were subscribing to it.
+
+From v1.1.0 it changes to the familiar Cordova style:
+```js
+var app = {
+  // Application Constructor
+  initialize: function() {
+    this.bindEvents();
+  },
+
+  // Bind Event Listeners
+  bindEvents: function() {
+    document.addEventListener('deviceready', this.onDeviceReady, false);
+  },
+
+  // deviceready Event Handler
+  onDeviceReady: function() {
+    universalLinks.subscribe('eventName', app.didLaunchAppFromLink);
+  },
+
+  didLaunchAppFromLink: function(eventData) {
+    alert('Did launch application from the link: ' + eventData.url);
+  }
+};
+
+app.initialize();
+```
+
+As you can see, now you subscribe to event via `universalLinks` module when `deviceready` is fired. Actually, you can subscribe to it in any place of your application: plugin stores the event internally and dispatches it when there is a subscriber for it.
+
+Also, in v1.0.x `ul_didLaunchAppFromLink` was used as a default event name. From v1.1.0 you can just do like that:
+```js
+universalLinks.subscribe(null, callbackFunction);
+```
+If you didn't specify event name for the `path` or `host` - in the JS code just pass `null` as event name. But just for readability you might want to specify it `config.xml`.
+
+### How to build plugin in Xcode 6
+
+If you are still using Xcode 6 and there is no way for you to upgrade right now to Xcode 7 - follow the instructions below in order to use this plugin.
+
+1. Clone the `xcode6-support` branch of the plugin from the GitHub:
+
+  ```sh
+  mkdir /Workspace/Mobile/CordovaPlugins
+  cd /Workspace/Mobile/CordovaPlugins
+  git clone -b xcode6-support https://github.com/nordnet/cordova-universal-links-plugin.git
+  ```
+
+2. Go to your applications project and add plugin from the cloned source:
+
+  ```sh
+  cd /Workspace/Mobile/CoolApp
+  cordova plugin add /Workspace/Mobile/CordovaPlugins/cordova-universal-links-plugin/
+  ```
+
+Now you can build your project in Xcode 6.
 
 ### Cordova config preferences
 Cordova uses `config.xml` file to set different project preferences: name, description, starting page and so on. Using this config file you can also set options for the plugin.
@@ -70,7 +143,7 @@ In it you define hosts and paths that application should handle. You can have as
 `<host />` tag lets you describe hosts, that your application supports. It can have three attributes:
 - `name` - hostname. **This is a required attribute.**
 - `scheme` - supported url scheme. Should be either `http` or `https`. If not set - `http` is used.
-- `event` - name of the event that is send to JavaScript when application is launched from the link, which contains the given hostname. If not set - `ul_didLaunchAppFromLink` event name is used.
+- `event` - name of the event, that is used to match application launch from this host to a callback on the JS side. If not set - pass `null` as event name when you are subscribing in JS code.
 
 For example,
 
@@ -80,14 +153,14 @@ For example,
 </universal-links>
 ```
 
-defines, that when user clicks on any `https://example.com` link - `ul_myExampleEvent` is dispatched to the JavaScript side. You can subscribe to it and act properly. More details regarding event handling can be found [below](#application-launch-handling).
+defines, that when user clicks on any `https://example.com` link - callback, that was set for `ul_myExampleEvent` gets called. More details regarding event handling can be found [below](#application-launch-handling).
 
 #### path
 In `<path />` tag you define which paths for the given host you want to support. If no `<path />` is set - then we want to handle all of them. If paths are defined - then application will process only those links.
 
 Supported attributes are:
 - `url` - path component of the url; should be relative to the host name. **This is a required attribute.**
-- `event` - name of the event that is send to JavaScript when application is launched from the link with the given hostname and path. If not set - `ul_didLaunchAppFromLink` event name is used.
+- `event` - name of the event, that is used to match application launch from the given hostname and path to a callback on the JS side. If not set - pass `null` as event name when you are subscribing in JS code.
 
 For example,
 
@@ -99,7 +172,7 @@ For example,
 </universal-links>
 ```
 
-defines, that when user clicks on `http://example.com/some/path` - application will be launched, and event `ul_didLaunchAppFromLink` is send to JavaScript side. All other links from that host will be ignored.
+defines, that when user clicks on `http://example.com/some/path` - application will be launched, and default callback gets called. All other links from that host will be ignored.
 
 Query parameters are not used for link matching. For example, `http://example.com/some/path?foo=bar#some_tag` will work the same way as `http://example.com/some/path` does.
 
@@ -143,22 +216,92 @@ is the same as:
 </universal-links>
 ```
 
-### Application launch handling
-As mentioned - it is not enough just to redirect a user into your app, you will also need to display the correct content. In order to help you with that - the plugin will send the appropriate event with url data to the JavaScript side. By default, event name is `ul_didLaunchAppFromLink`, but you can specify any name for any host/path combination by using `event` attribute.
+#### ios-team-id
 
-To subscribe for default UL event in JavaScript - use `document.addEventListener` like so:
+As described in `Step 2` of [Configure apple-app-site-association file for website](#configure-apple-app-site-association-file-for-website) section: when application is build from the CLI - plugin generates `apple-app-site-association` files for each host, defined in `config.xml`. In them there's an `appID` property that holds your iOS Team ID and Bundle ID:
 
-```js
-document.addEventListener('ul_didLaunchAppFromLink', didLaunchAppFromLink, false);
-
-function didLaunchAppFromLink(event) {
-  var urlData = event.detail;
-  console.log('Did launch application from the link: ' + urlData.url);
-  // do some work
+```json
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "<TEAM_ID_FROM_MEMBER_CENTER>.<BUNDLE_ID>",
+        "paths": [
+          "/some/path/*"
+        ]
+      }
+    ]
+  }
 }
 ```
 
-`event.detail` holds information about the launching url. For example, for `http://myhost.com/news/ul-plugin-released.html?foo=bar#cordova-news` it will be:
+- `<BUNDLE_ID>` is replaced with the id, that is defined in the `widget` of your `config.xml`. For example:
+
+  ```xml
+  <widget id="com.example.ul" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+  ```
+
+- `<TEAM_ID_FROM_MEMBER_CENTER>` - that property is defined in the member center of your iOS account. So, you can either put it in the generated `apple-app-site-association` file manually, or use `<ios-team-id>` preference in `config.xml` like so:
+
+  ```xml
+  <universal-links>
+      <ios-team-id value="<TEAM_ID_FROM_MEMBER_CENTER>" />
+  </universal-links>
+  ```
+
+For example, following `config.xml`
+```xml
+<widget id="com.example.ul" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+
+<!-- some other cordova preferences -->
+
+<universal-links>
+    <ios-team-id value="1Q2WER3TY" />
+    <host name="mysite.com" >
+      <path url="/some/path/*" />
+    </host>
+</universal-links>
+</widget>
+```
+
+will result into
+```json
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "1Q2WER3TY.com.example.ul",
+        "paths": [
+          "/some/path/*"
+        ]
+      }
+    ]
+  }
+}
+```
+
+This is iOS-only preference, Android doesn't need it.
+
+### Application launch handling
+As mentioned - it is not enough just to redirect a user into your app, you will also need to display the correct content. In order to solve that - plugin provides JavaScript module: `universalLinks`. To get notified on application launch do the following:
+```js
+universalLinks.subscribe('eventName', function (eventData) {
+  // do some work
+  console.log('Did launch application from the link: ' + eventData.url);
+});
+```
+
+If you didn't specify event name for path and host in `config.xml` - just pass `null` as a first parameter:
+```js
+universalLinks.subscribe(null, function (eventData) {
+  // do some work
+  console.log('Did launch application from the link: ' + eventData.url);
+});
+```
+
+`eventData` holds information about the launching url. For example, for `http://myhost.com/news/ul-plugin-released.html?foo=bar#cordova-news` it will be:
 
 ```json
 {
@@ -179,6 +322,11 @@ function didLaunchAppFromLink(event) {
 - `path` - path component of the url;
 - `params` - dictionary with query parameters; the ones that after `?` character;
 - `hash` - content after `#` character.
+
+If you want - you can also unsubscribe from the events later on:
+```js
+universalLinks.unsubscribe('eventName');
+```
 
 Now it's time for some examples. In here we are gonna use Android, because it is easier to test (see [testing for Android](#testing-ul-for-android-locally) section). JavaScript side is platform independent, so all the example code below will also work for iOS.
 
@@ -222,26 +370,25 @@ Now it's time for some examples. In here we are gonna use Android, because it is
     // Bind Event Listeners
     bindEvents: function() {
       document.addEventListener('deviceready', this.onDeviceReady, false);
-      document.addEventListener('openNewsListPage', this.onNewsListPageRequested, false);
-      document.addEventListener('openNewsDetailedPage', this.onNewsDetailedPageRequested, false);
     },
 
     // deviceready Event Handler
     onDeviceReady: function() {
-      console.log('Handle deviceready event if needed.');
+      console.log('Device is ready for work');
+      universalLinks.subscribe('openNewsListPage', app.onNewsListPageRequested);
+      universalLinks.subscribe('openNewsDetailedPage', app.onNewsDetailedPageRequested);
     },
 
     // openNewsListPage Event Handler
-    onNewsListPageRequested: function(event) {
+    onNewsListPageRequested: function(eventData) {
       console.log('Showing list of awesome news.');
 
       // do some work to show list of news
     },
 
     // openNewsDetailedPage Event Handler
-    onNewsDetailedPageRequested: function(event) {
-      var linkData = event.detail;
-      console.log('Showing to user details page: ' + linkData.path);
+    onNewsDetailedPageRequested: function(eventData) {
+      console.log('Showing to user details page: ' + eventData.path);
 
       // do some work to show detailed page
     }
@@ -293,7 +440,7 @@ Now, let's say, you want your app to handle all links from `myhost.com`, but you
    <host name="myhost.com">
      <path url="/news/" event="openNewsListPage" />
      <path url="/news/*" event="openNewsDetailedPage" />
-     <path url="*" />
+     <path url="*" evant="launchedAppFromLink" />
    </host>
   </universal-links>
   ```
@@ -312,34 +459,33 @@ Now, let's say, you want your app to handle all links from `myhost.com`, but you
     // Bind Event Listeners
     bindEvents: function() {
       document.addEventListener('deviceready', this.onDeviceReady, false);
-      document.addEventListener('openNewsListPage', this.onNewsListPageRequested, false);
-      document.addEventListener('openNewsDetailedPage', this.onNewsDetailedPageRequested, false);
-      document.addEventListener('ul_didLaunchAppFromLink', this.onApplicationDidLaunchFromLink, false);
     },
 
     // deviceready Event Handler
     onDeviceReady: function() {
       console.log('Handle deviceready event if you need');
+      universalLinks.subscribe('openNewsListPage', app.onNewsListPageRequested);
+      universalLinks.subscribe('openNewsDetailedPage', app.onNewsDetailedPageRequested);
+      universalLinks.subscribe('launchedAppFromLink', app.onApplicationDidLaunchFromLink);
     },
 
     // openNewsListPage Event Handler
-    onNewsListPageRequested: function(event) {
+    onNewsListPageRequested: function(eventData) {
       console.log('Showing to user list of awesome news');
 
       // do some work to show list of news
     },
 
     // openNewsDetailedPage Event Handler
-    onNewsDetailedPageRequested: function(event) {
+    onNewsDetailedPageRequested: function(eventData) {
       console.log('Showing to user details page for some news');
 
       // do some work to show detailed page
     },
 
-    // ul_didLaunchAppFromLink Event Handler
-    onApplicationDidLaunchFromLink: function(event) {
-      var linkData = event.detail;
-      console.log('Did launch app from the link: ' + linkData.url);
+    // launchedAppFromLink Event Handler
+    onApplicationDidLaunchFromLink: function(eventData) {
+      console.log('Did launch app from the link: ' + eventData.url);
     }
   };
 
@@ -486,14 +632,14 @@ This way you can experiment with your Android application and check how it corre
 
 In the case of iOS integration of the Universal Links is a little harder. It consist of two steps:
 
-1. Register your application on [developer console](https://developers.apple.com) and enable `Associated Domains` feature.
+1. Register your application on [developer console](https://developer.apple.com) and enable `Associated Domains` feature.
 2. Generate, sign and upload `apple-app-site-association` file on your website (if you don't have it yet).
 
 First one you will have to do manually, but plugin will help you with the second step.
 
 #### Activate UL support in member center
 
-1. Go to your [developer console](https://developers.apple.com). Click on `Certificate, Identifiers & Profiles` and then on `Identifiers`.
+1. Go to your [developer console](https://developer.apple.com). Click on `Certificate, Identifiers & Profiles` and then on `Identifiers`.
 
   ![Developer console](docs/images/developer-console.jpg?raw=true)
 

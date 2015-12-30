@@ -9,7 +9,10 @@ Which is:
 (function() {
 
   var path = require('path'),
+    compare = require('node-version-compare'),
     ConfigXmlHelper = require('../configXmlHelper.js'),
+    // pbxFile = require('xcode/lib/pbxFile'),
+    IOS_DEPLOYMENT_TARGET = '8.0',
     COMMENT_KEY = /_comment$/,
     context;
 
@@ -54,12 +57,29 @@ Which is:
     var configurations = nonComments(xcodeProject.pbxXCBuildConfigurationSection()),
       entitlementsFilePath = pathToEntitlementsFile(),
       config,
-      buildSettings;
+      buildSettings,
+      deploymentTargetIsUpdated;
 
     for (config in configurations) {
       buildSettings = configurations[config].buildSettings;
       buildSettings['CODE_SIGN_ENTITLEMENTS'] = '"' + entitlementsFilePath + '"';
+
+      // if deployment target is less then the required one - increase it
+      if (buildSettings['IPHONEOS_DEPLOYMENT_TARGET']) {
+        if (compare(buildSettings['IPHONEOS_DEPLOYMENT_TARGET'], IOS_DEPLOYMENT_TARGET) == -1) {
+          buildSettings['IPHONEOS_DEPLOYMENT_TARGET'] = IOS_DEPLOYMENT_TARGET;
+          deploymentTargetIsUpdated = true;
+        }
+      } else {
+        buildSettings['IPHONEOS_DEPLOYMENT_TARGET'] = IOS_DEPLOYMENT_TARGET;
+        deploymentTargetIsUpdated = true;
+      }
     }
+
+    if (deploymentTargetIsUpdated) {
+      console.log('IOS project now has deployment target set as: ' + IOS_DEPLOYMENT_TARGET);
+    }
+
     console.log('IOS project Code Sign Entitlements now set to: ' + entitlementsFilePath);
   }
 

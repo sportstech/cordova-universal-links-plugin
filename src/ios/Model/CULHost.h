@@ -28,7 +28,7 @@
  *  Event name that is sent to JS when user clicks on the link from this host.
  *  Defined as 'event' attribute.
  */
-@property (nonatomic, readonly, strong) NSString *event;
+@property (nonatomic, strong) NSString *event;
 
 /**
  *  List of paths, that is set for that host in config.xml.
@@ -40,7 +40,7 @@
  *
  *  @param name   host name
  *  @param scheme scheme; if <code>nil</code> - http will be used
- *  @param event  event name; if <code>nil</code> - ul_didLaunchAppFromLink event name will be used
+ *  @param event  event name; if <code>nil</code> - didLaunchAppFromLink event name will be used
  *
  *  @return instance of the CULHost
  */
