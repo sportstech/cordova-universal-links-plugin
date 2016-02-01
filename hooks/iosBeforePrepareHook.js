@@ -72,7 +72,9 @@ function run(cordovaContext) {
       mungeValue = {}
     }
     // console.log("mungeValue", mungeValue)
-    munge( cordovaContext, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
+    if (!/platform (add|rm)/.test(cordovaContext.cmdLine)) {
+      munge( cordovaContext, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
+    }
     
     // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
     // https://github.com/m1r4ge/cordova-lib/commit/b3d38a777cef08d751e0a00aa9fbb6f455de2fe4
