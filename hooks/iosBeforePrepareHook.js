@@ -85,10 +85,10 @@ function run(cordovaContext) {
     // support new node version
     try {
       plistHelperFile = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
-      jsConents = fs.readFileSync(p, 'utf8')
+      jsConents = fs.readFileSync(plistHelperFile, 'utf8')
     } catch (e) {
       plistHelperFile = path.join(projectRoot, 'node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
-      jsConents = fs.readFileSync(p, 'utf8')
+      jsConents = fs.readFileSync(plistHelperFile, 'utf8')
     }
     jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
     fs.writeFileSync(p, jsConents, 'utf8');
