@@ -79,9 +79,17 @@ function run(cordovaContext) {
     // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
     // https://github.com/m1r4ge/cordova-lib/commit/b3d38a777cef08d751e0a00aa9fbb6f455de2fe4
     var
-      p = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
-      ,jsConents = fs.readFileSync(p, 'utf8')
+      plistHelperFile
+      ,jsConents
     ;
+    // support new node version
+    try {
+      plistHelperFile = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
+      jsConents = fs.readFileSync(p, 'utf8')
+    } catch (e) {
+      plistHelperFile = path.join(projectRoot, 'node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
+      jsConents = fs.readFileSync(p, 'utf8')
+    }
     jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
     fs.writeFileSync(p, jsConents, 'utf8');
   }
