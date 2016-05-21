@@ -91,7 +91,7 @@ function run(cordovaContext) {
       jsConents = fs.readFileSync(plistHelperFile, 'utf8')
     }
     jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
-    fs.writeFileSync(p, jsConents, 'utf8');
+    fs.writeFileSync(plistHelperFile, jsConents, 'utf8');
   }
   
   
