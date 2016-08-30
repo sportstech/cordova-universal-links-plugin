@@ -154,7 +154,7 @@ function isDataTagForUniversalLinks(data) {
 
   var dataHost = data[0]['$']['android:host'];
   var dataScheme = data[0]['$']['android:scheme'];
-  var hostIsSet = true, // STI: changed from: dataHost != null && dataHost.length > 0;
+  var hostIsSet = true; // STI: changed from: dataHost != null && dataHost.length > 0;
   var schemeIsSet = dataScheme != null && dataScheme.length > 0;
 
   return hostIsSet && schemeIsSet;
