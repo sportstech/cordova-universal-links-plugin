@@ -4,12 +4,11 @@ It will check if project name has changed. If so - it will change the name of th
 If file name has no changed - hook would not do anything.
 */
 
-var path = require('path'),
-  fs = require('fs'),
-  ConfigXmlHelper = require('./lib/configXmlHelper.js')
-  ,munge = require('./lib/munge.js')
-  ,configParser = require('./lib/configXmlParser.js')
-;
+var path = require('path');
+var fs = require('fs');
+var ConfigXmlHelper = require('./lib/configXmlHelper.js');
+var munge = require('./lib/munge.js');
+var configParser = require('./lib/configXmlParser.js');
 
 module.exports = function(ctx) {
   run(ctx);
@@ -18,35 +17,35 @@ module.exports = function(ctx) {
 /**
  * Run the hook logic.
  *
- * @param {Object} cordovaContext - cordova context object
+ * @param {Object} ctx - cordova context object
  */
-function run(cordovaContext) {
-  var projectRoot = cordovaContext.opts.projectRoot,
-    iosProjectFilePath = path.join(projectRoot, 'platforms', 'ios'),
-    configXmlHelper = new ConfigXmlHelper(cordovaContext),
-    oldProjectName = getOldProjectName(iosProjectFilePath),
-    newProjectName = configXmlHelper.getProjectName()
-    ,pluginPreferences = configParser.readPreferences(cordovaContext)
-    ,nameHasNotChanged = oldProjectName.length > 0 && oldProjectName === newProjectName
-  ;
+function run(ctx) {
+  var projectRoot = ctx.opts.projectRoot;
+  var iosProjectFilePath = path.join(projectRoot, 'platforms', 'ios');
+  var configXmlHelper = new ConfigXmlHelper(ctx);
+  var newProjectName = configXmlHelper.getProjectName();
+
+  var oldProjectName = getOldProjectName(iosProjectFilePath);
 
   // if name has not changed - do nothing
-  if (!nameHasNotChanged) {
-    console.log('Project name has changed. Renaming .entitlements file.');
+  if (oldProjectName.length > 0 && oldProjectName === newProjectName) {
+    return;
+  }
 
-    // if it does - rename it
-    var oldEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', oldProjectName + '.entitlements'),
-      newEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', newProjectName + '.entitlements');
+  console.log('Project name has changed. Renaming .entitlements file.');
 
-    try {
-      fs.renameSync(oldEntitlementsFilePath, newEntitlementsFilePath);
-    } catch (err) {
-      console.warn('Failed to rename .entitlements file.');
-      console.warn(err);
-    }
+  // if it does - rename it
+  var oldEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', oldProjectName + '.entitlements');
+  var newEntitlementsFilePath = path.join(iosProjectFilePath, oldProjectName, 'Resources', newProjectName + '.entitlements');
+
+  try {
+    fs.renameSync(oldEntitlementsFilePath, newEntitlementsFilePath);
+  } catch (err) {
+    console.warn('Failed to rename .entitlements file.');
+    console.warn(err);
   }
   
-  if (cordovaContext.opts.platforms.indexOf('ios') > -1) {
+  if (ctx.opts.platforms.indexOf('ios') > -1) {
     var schemes = [], mungeValue;
     var plistString = "<array><dict>";
     plistString += "<key>CFBundleTypeRole</key><string>Editor</string>";
@@ -72,8 +71,8 @@ function run(cordovaContext) {
       mungeValue = {}
     }
     // console.log("mungeValue", mungeValue)
-    if (!/platform (add|rm)/.test(cordovaContext.cmdLine)) {
-      munge( cordovaContext, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
+    if (!/platform (add|rm)/.test(ctx.cmdLine)) {
+      munge( ctx, 'ios', [ "config_munge", "files", "*-Info.plist", "parents", "CFBundleURLTypes" ], mungeValue, true);
     }
     
     // fix for https://github.com/EddyVerbruggen/Custom-URL-scheme/issues/23
@@ -84,10 +83,10 @@ function run(cordovaContext) {
     ;
     // support new node version
     try {
-      plistHelperFile = path.join(projectRoot, 'node_modules/cordova/node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
+      plistHelperFile = path.join(projectRoot, 'node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
       jsConents = fs.readFileSync(plistHelperFile, 'utf8')
     } catch (e) {
-      plistHelperFile = path.join(projectRoot, 'node_modules/cordova-lib/src/plugman/util/plist-helpers.js' )
+      plistHelperFile = path.join(projectRoot, 'node_modules/plugman/util/plist-helpers.js' )
       jsConents = fs.readFileSync(plistHelperFile, 'utf8')
     }
     jsConents = jsConents.replace('if (node[i] === node[j])', 'if (JSON.stringify(node[i]) === JSON.stringify(node[j]))');
@@ -107,8 +106,7 @@ function run(cordovaContext) {
  * @return {String} old project name
  */
 function getOldProjectName(projectDir) {
-  var files = [],
-    projectName = '';
+  var files = [];
 
   try {
     files = fs.readdirSync(projectDir);
@@ -116,17 +114,14 @@ function getOldProjectName(projectDir) {
     return '';
   }
 
-  // find file with .xcodeproj extension, use it as an old project name
-  files.some(function(fileName) {
-    if (path.extname(fileName) === '.xcodeproj') {
-      projectName = path.basename(fileName, '.xcodeproj');
-      return true;
-    }
-
-    return false;
+  var projectFile = files.find(function(fileName) {
+    return path.extname(fileName) === '.xcodeproj';
   });
+  if (!projectFile) {
+    return '';
+  }
 
-  return projectName;
+  return path.basename(projectFile, '.xcodeproj');
 }
 
 // endregion

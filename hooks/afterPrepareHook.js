@@ -5,12 +5,14 @@ It will inject required preferences in the platform-specific projects, based on 
 data you have specified in the projects config.xml file.
 */
 
-var configParser = require('./lib/configXmlParser.js'),
-  androidManifestWriter = require('./lib/android/manifestWriter.js'),
-  iosProjectEntitlements = require('./lib/ios/projectEntitlements.js'),
-  iosProjectPreferences = require('./lib/ios/xcodePreferences.js'),
-  ANDROID = 'android',
-  IOS = 'ios';
+var configParser = require('./lib/configXmlParser.js');
+var androidManifestWriter = require('./lib/android/manifestWriter.js');
+var androidWebHook = require('./lib/android/webSiteHook.js');
+var iosProjectEntitlements = require('./lib/ios/projectEntitlements.js');
+var iosAppSiteAssociationFile = require('./lib/ios/appleAppSiteAssociationFile.js');
+var iosProjectPreferences = require('./lib/ios/xcodePreferences.js');
+var ANDROID = 'android';
+var IOS = 'ios';
 
 module.exports = function(ctx) {
   run(ctx);
@@ -22,8 +24,8 @@ module.exports = function(ctx) {
  * @param {Object} cordovaContext - cordova context object
  */
 function run(cordovaContext) {
-  var pluginPreferences = configParser.readPreferences(cordovaContext),
-    platformsList = cordovaContext.opts.platforms;
+  var pluginPreferences = configParser.readPreferences(cordovaContext);
+  var platformsList = cordovaContext.opts.platforms;
 
   // if no preferences are found - exit
   if (pluginPreferences == null) {
@@ -61,6 +63,9 @@ function run(cordovaContext) {
 function activateUniversalLinksInAndroid(cordovaContext, pluginPreferences) {
   // inject preferenes into AndroidManifest.xml
   androidManifestWriter.writePreferences(cordovaContext, pluginPreferences);
+
+  // generate html file with the <link> tags that you should inject on the website.
+  androidWebHook.generate(cordovaContext, pluginPreferences);
 }
 
 /**
@@ -75,4 +80,7 @@ function activateUniversalLinksInIos(cordovaContext, pluginPreferences) {
 
   // generate entitlements file
   iosProjectEntitlements.generateAssociatedDomainsEntitlements(cordovaContext, pluginPreferences);
+
+  // generate apple-site-association-file
+  iosAppSiteAssociationFile.generate(cordovaContext, pluginPreferences);
 }

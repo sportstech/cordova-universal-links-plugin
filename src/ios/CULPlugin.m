@@ -94,7 +94,8 @@
     NSURLComponents *urlComponents = [NSURLComponents componentsWithURL:launchURL resolvingAgainstBaseURL:YES];
     CULHost *host = nil;
     for (CULHost *supportedHost in _supportedHosts) {
-        if ([supportedHost.name isEqualToString:urlComponents.host]) {
+        NSPredicate *pred = [NSPredicate predicateWithFormat:@"self LIKE[c] %@", supportedHost.name];
+        if ([pred evaluateWithObject: urlComponents.host]) {
             host = supportedHost;
             break;
         }

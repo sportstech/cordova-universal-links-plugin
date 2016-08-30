@@ -20,7 +20,9 @@ It is important not only to redirect users to your app from the web, but also pr
 
 ## Supported Platforms
 - Android 4.0.0 or above.
-- iOS 8.0 or above. Xcode 7 is required. To build plugin with Xcode 6 - [read the instructions](#how-to-build-plugin-in-xcode-6) below.
+- iOS 9.0 or above. Xcode 7 is required. To build plugin with Xcode 6 - [read the instructions](#how-to-build-plugin-in-xcode-6) below.
+
+**iOS Note:** you can use this plugin in iOS 8 applications. It will not crash the app, but it also is not gonna handle the links, because this is iOS 9 feature.
 
 ## Documentation
 - [Installation](#installation)
@@ -32,16 +34,19 @@ It is important not only to redirect users to your app from the web, but also pr
   - [Modify web pages](#modify-web-pages)
   - [Verify your website on Webmaster Tools](#verify-your-website-on-webmaster-tools)
   - [Connect your app in the Google Play console](#connect-your-app-in-the-google-play-console)
+  - [Digital Asset Links support](#digital-asset-links-support)
 - [Testing UL for Android locally](#testing-ul-for-android-locally)
 - [iOS web integration](#ios-web-integration)
   - [Activate UL support in member center](#activate-ul-support-in-member-center)
   - [Configure apple-app-site-association file for website](#configure-apple-app-site-association-file-for-website)
 - [Testing iOS application](#testing-ios-application)
 - [Useful notes on Universal Links for iOS](#useful-notes-on-universal-links-for-ios)
+  - [They don't work everywhere](#they-dont-work-everywhere)
+  - [How links handled in Safari](#how-links-handled-in-safari)
 - [Additional documentation links](#additional-documentation-links)
 
 ### Installation
-This requires cordova 5.0+ (current stable 1.1.0)
+This requires cordova 5.0+ (current stable 1.2.0)
 
 ```sh
 cordova plugin add cordova-universal-links-plugin
@@ -125,6 +130,7 @@ If you are still using Xcode 6 and there is no way for you to upgrade right now 
 Now you can build your project in Xcode 6.
 
 ### Cordova config preferences
+
 Cordova uses `config.xml` file to set different project preferences: name, description, starting page and so on. Using this config file you can also set options for the plugin.
 
 Those preferences are specified inside the `<universal-links>` block. For example:
@@ -154,6 +160,19 @@ For example,
 ```
 
 defines, that when user clicks on any `https://example.com` link - callback, that was set for `ul_myExampleEvent` gets called. More details regarding event handling can be found [below](#application-launch-handling).
+
+You can also use wildcards for domains. For example,
+
+```xml
+<universal-links>
+    <host name="*.users.example.com" scheme="https" event="wildcardusers" />
+    <host name="*.example.com" scheme="https" event="wildcardmatch" />
+</universal-links>
+```
+
+Please note, that iOS will look for the `apple-app-site-association` on `https://users.example.com/apple-app-site-association` and `https://example.com/apple-app-site-association` respectively.
+
+Android will try to access the [app links file](https://developer.android.com/training/app-links/index.html#web-assoc) at `https://*.users.example.com/.well-known/assetlinks.json` and `https://*.example.com/.well-known/assetlinks.json` respectively.
 
 #### path
 In `<path />` tag you define which paths for the given host you want to support. If no `<path />` is set - then we want to handle all of them. If paths are defined - then application will process only those links.
@@ -284,7 +303,17 @@ will result into
 
 This is iOS-only preference, Android doesn't need it.
 
+#### Prevent Android from creating multiple app instances
+
+When clicking on a universal link from another App (typically from an email client), Android will likely create a new instance of your app, even if it is already loaded in memory. It may even create a new instance with each click, resulting in many instances of your app in the task switcher. See details in [issue #37](https://github.com/nordnet/cordova-universal-links-plugin/issues/37).
+
+To force Android opening always the same app instance, a known workaround is to change the [activity launch mode](https://developer.android.com/guide/topics/manifest/activity-element.html#lmode) to `singleInstance`. To do so, you can use the following preference in Cordova `config.xml` file:
+```xml
+<preference name="AndroidLaunchMode" value="singleInstance" />
+```
+
 ### Application launch handling
+
 As mentioned - it is not enough just to redirect a user into your app, you will also need to display the correct content. In order to solve that - plugin provides JavaScript module: `universalLinks`. To get notified on application launch do the following:
 ```js
 universalLinks.subscribe('eventName', function (eventData) {
@@ -440,7 +469,7 @@ Now, let's say, you want your app to handle all links from `myhost.com`, but you
    <host name="myhost.com">
      <path url="/news/" event="openNewsListPage" />
      <path url="/news/*" event="openNewsDetailedPage" />
-     <path url="*" evant="launchedAppFromLink" />
+     <path url="*" event="launchedAppFromLink" />
    </host>
   </universal-links>
   ```
@@ -555,6 +584,32 @@ If your website is brand new, you’ll want to verify it through [Webmaster Tool
 
 Next, you’ll want to connect your app using the Google Play Console so the app indexing starts working. If you go to your app, there’s a menu that says `Services and API` in which you can click `Verify Website`, and provide the URL to check that it has the appropriate tags in the HTML. Once that’s all set up, it will start showing in search results.
 
+#### Digital Asset Links support
+
+For Android version 6.0 (Marshmallow) or greater [Digital Asset Links](https://developers.google.com/digital-asset-links/v1/getting-started) can be used.
+
+Here's a very simplified example of how the website `www.example.com` could use Digital Asset Links to specify that any links to URLs in that site should open in a designated app rather than the browser:
+
+1. The website `www.example.com` publishes a statement list at `https://www.example.com/.well-known/assetlinks.json`. This is the official name and location for a statement list on a site. Statement lists in any other location, or with any other name, are not valid for this site. In our example, the statement list consists of one statement, granting its Android app the permission to open links on its site:
+
+  ```json
+  [{
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target" : { "namespace": "android_app", "package_name": "com.example.app",
+                 "sha256_cert_fingerprints": ["hash_of_app_certificate"] }
+  }]
+  ```
+
+  A statement list supports an array of statements within the [ ] marks, but our example file contains only one statement.
+
+2. The Android app listed in the statement above has an intent filter that specifies the scheme, host, and path pattern of URLs that it wants to handle: in this case, `https://www.example.com`. The intent filter includes a special attribute `android:autoVerify`, new to Android M, which indicates that Android should verify the statement on the website, described in the intent filter when the app is installed.
+
+3. A user installs the app. Android sees the intent filter with the `autoVerify` attribute and checks for the presence of the statement list at the specified site. If present, Android checks whether that file includes a statement granting link handling to the app, and verifies the app against the statement by certificate hash. If everything checks out, Android will then forward any `https://www.example.com` intents to the `example.com` app.
+
+4. The user clicks a link to `https://www.example.com/puppies` on the device. This link could be anywhere: in a browser, in a Google Search Appliance suggestion, or anywhere else. Android forwards the intent to the `example.com` app.
+
+5. The `example.com` app receives the intent and chooses to handle it, opening the puppies page in the app. If for some reason the app had declined to handle the link, or if the app were not on the device, then the link will be send to the next default intent handler, matching that intent pattern (i.e. browser).
+
 ### Testing UL for Android locally
 
 To test Android application for Deep Linking support you just need to execute the following command in the console:
@@ -632,8 +687,8 @@ This way you can experiment with your Android application and check how it corre
 
 In the case of iOS integration of the Universal Links is a little harder. It consist of two steps:
 
-1. Register your application on [developer console](https://developer.apple.com) and enable `Associated Domains` feature.
-2. Generate, sign and upload `apple-app-site-association` file on your website (if you don't have it yet).
+1. Register your application on [developer console](https://developer.apple.com) and enable `Associated Domains` feature. Make sure your website is SSL ready.
+2. Generate, and upload `apple-app-site-association` file on your website (if you don't have it yet).
 
 First one you will have to do manually, but plugin will help you with the second step.
 
@@ -657,14 +712,13 @@ Now your App ID is registered and has `Associated Domains` feature.
 
 In order for Universal Links to work - you need to associate your application with the certain domain. For that you need to:
 
-1. Get SSL certification for your domain name.
+1. Make your site to work over `https`.
 2. Create `apple-app-site-association` file, containing your App ID and paths you want to handle.
-3. Sign it with SSL certificate.
-4. Upload `apple-app-site-association` file in the root of your website.
+3. Upload `apple-app-site-association` file in the root of your website.
 
 ##### Step 1
 
-We are not gonna describe stuff regarding certificate acquiring. You can find lots of information about that on the Internet. For example, you can do as described [here](https://blog.branch.io/how-to-setup-universal-links-to-deep-link-on-apple-ios-9).
+We are not gonna describe stuff regarding certificate acquiring and making your website to work over `https`. You can find lots of information about that on the Internet.
 
 ##### Step 2
 
@@ -717,7 +771,7 @@ And the second one:
       {
         "appID": "<YOUR_TEAM_ID_FROM_MEMBER_CENTER>.com.example.ul",
         "paths": [
-          "*"
+          "*", "/"
         ]
       }
     ]
@@ -725,7 +779,9 @@ And the second one:
 }
 ```
 
-Before signing those files and uploading them on your servers - you need to replace `<YOUR_TEAM_ID_FROM_MEMBER_CENTER>` with your actual team ID from the member center. You can find it in `Developer Account Summary` section on the [developer.apple.com](https://developer.apple.com/membercenter/index.action#accountSummary).
+**Note:** in the second case plugin will add `/` to the paths, so the app would be opened with `https://secondhost.com.com/` links, and not only with `https://secondhost.com/some/random.html`.
+
+Before uploading them on your servers - you need to replace `<YOUR_TEAM_ID_FROM_MEMBER_CENTER>` with your actual team ID from the member center. You can find it in `Developer Account Summary` section on the [developer.apple.com](https://developer.apple.com/membercenter/index.action#accountSummary).
 
 Also, it is a `Prefix` preference in the App ID description.
 
@@ -735,21 +791,7 @@ If you already have `apple-app-site-association` file - then you need to add `ap
 
 ##### Step 3
 
-Again, you can find lots of information on the Internet regarding singing file with SSL certificate.
-
-Continuing previous example, you can do it like that:
-
-```
-cat firsthost.com#apple-app-site-association | openssl smime -sign -inkey firsthost.com.key
-                                                -signer firsthost.com.cert
-                                                -certfile intermediate.cert
-                                                -noattr -nodetach
-                                                -outform DER > apple-app-site-association
-```
-
-##### Step 4
-
-Upload signed `apple-app-site-association` file in the root of your domain.
+Upload `apple-app-site-association` file in the root of your domain.
 
 **It should be downloadable from the direct link.** For example, `https://firsthost.com/apple-app-site-association`.
 
@@ -818,7 +860,13 @@ Step-by-step guide:
 
 ### Useful notes on Universal Links for iOS
 
-First of all, you need to understand how the Universal Links works. When user clicks on the link - Safari checks, if any of the installed apps can handle it. If app is found - Safari starts it, if not - link opened as usually in the browser.
+#### They don't work everywhere
+
+First of all - you need to accept the fact, that Universal Links **doesn't work everywhere**. Some applications doesn't respect them. You can read more in [that article](https://blog.branch.io/ios-9.2-deep-linking-guide-transitioning-to-universal-links), section `Universal Links Still Don’t Work Everywhere`.
+
+#### How links handled in Safari
+
+When user clicks on the link - Safari checks, if any of the installed apps can handle it. If app is found - Safari starts it, if not - link opened as usually in the browser.
 
 Now, let's assume you have a following setup in `config.xml`:
 ```xml
@@ -828,6 +876,7 @@ Now, let's assume you have a following setup in `config.xml`:
   </host>
 </universal-links>
 ```
+
 By this we state, that our app should handle `http://mywebsite.com/some/page.html` link. So, if user clicks on `http://mywebsite.com` - application would not launch. And this is totally as you want it to be. Now comes the interesting part: if user opens `http://mywebsite.com` in the Safari and then presses on `http://mywebsite.com/some/page.html` link - application is not gonna start, he will stay in the browser. And at the top of that page he will see a Smart Banner. To launch the application user will have to click on that banner. And this is a normal behaviour from iOS. If user already viewing your website in the browser - he doesn't want to leave it, when he clicks on some link, that leads on the page inside your site. But if he clicks on the `http://mywebsite.com/some/page.html` link from some other source - then it will start your application.
 
 Another thing that every developer should be aware of:
@@ -847,3 +896,4 @@ When a user is in an app, opened by Universal Links - a return to browser option
 - [Apple documentation on apple-app-site-association file](https://developer.apple.com/library/ios/documentation/Security/Reference/SharedWebCredentialsRef/index.html)
 - [How to setup universal links on iOS 9](https://blog.branch.io/how-to-setup-universal-links-to-deep-link-on-apple-ios-9)
 - [Branch.io documentation on universal links](https://dev.branch.io/recipes/branch_universal_links/#enable-universal-links-on-the-branch-dashboard)
+- [Where universal links don't work](https://blog.branch.io/ios-9.2-deep-linking-guide-transitioning-to-universal-links)
