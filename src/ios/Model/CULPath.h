@@ -5,6 +5,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <objc/runtime.h>
 
 /**
  *  Model for <path /> entry for host in config.xml.

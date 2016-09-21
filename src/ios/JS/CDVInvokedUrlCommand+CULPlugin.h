@@ -5,6 +5,7 @@
 //
 
 #import <Cordova/CDVPlugin.h>
+#import <objc/runtime.h>
 
 /**
  *  Category to get the event name from the request, that is sent from JS side.

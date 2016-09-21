@@ -5,6 +5,7 @@
 //
 
 #import <Cordova/CDVPlugin.h>
+#import <objc/runtime.h>
 #import "CULHost.h"
 
 /**

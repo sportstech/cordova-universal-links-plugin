@@ -5,6 +5,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <objc/runtime.h>
 
 /**
  *  Helper category to work with NSBundle.

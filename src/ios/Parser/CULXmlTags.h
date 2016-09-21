@@ -5,6 +5,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <objc/runtime.h>
 
 /**
  *  XML tags that is used in config.xml to specify plugin preferences.
