@@ -47,7 +47,8 @@ function writePreferences(cordovaContext, pluginPreferences) {
 function removeOldOptions(manifestData) {
   var cleanManifest = manifestData;
   var activities = manifestData['manifest']['application'][0]['activity'];
-  removeIntentFiltersFromActivity(activities[0])
+
+  removeIntentFiltersFromActivity(activities[0]) // first activity is main
   cleanManifest['manifest']['application'][0]['activity'] = activities;
 
   return cleanManifest;
